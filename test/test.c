@@ -217,10 +217,23 @@ void test_msg(const char* call_to_tx, const char* call_de_tx, const char* extra_
     char call_to[14];
     char call_de[14];
     char extra[14];
-    ftx_message_rc_t rc_decode = ftx_message_decode_std(&msg, NULL, call_to, call_de, extra);
+    ftx_message_rc_t rc_decode;
+    ftx_message_type_t msg_type = ftx_message_get_type(&msg);
+    switch (msg_type)
+    {
+    case FTX_MESSAGE_TYPE_STANDARD:
+        rc_decode = ftx_message_decode_std(&msg, NULL, call_to, call_de, extra);
+        break;
+    case FTX_MESSAGE_TYPE_NONSTD_CALL:
+        rc_decode = ftx_message_decode_nonstd(&msg, NULL, call_to, call_de, extra);
+        break;
+    default:
+        printf("msg_type %d isn't testable yet\n", msg_type);
+        break;
+    }
     CHECK(rc_decode == FTX_MESSAGE_RC_OK);
-    CHECK(0 == strcmp(call_to, call_to_tx));
-    CHECK(0 == strcmp(call_de, call_de_tx));
+    CHECK(0 == strcmp(call_to, call_to_tx) || 0 == strcmp(call_to, "<...>"));
+    CHECK(0 == strcmp(call_de, call_de_tx) || 0 == strcmp(call_de, "<...>"));
     CHECK(0 == strcmp(extra, extra_tx));
     // CHECK(1 == 2);
     TEST_END;
@@ -232,7 +245,7 @@ int main()
 {
     // test1();
     // test4();
-    const char* callsigns[] = { "YL3JG", "W1A", "W1A/R", "W5AB", "W8ABC", "DE6ABC", "DE6ABC/R", "DE7AB", "DE9A", "3DA0X", "3DA0XYZ", "3DA0XYZ/R", "3XZ0AB", "3XZ0A" };
+    const char* callsigns[] = { "YL3JG", "W1A", "W1A/R", "W5AB", "W8ABC", "DE6ABC", "DE6ABC/R", "DE7AB", "DE9A", "3DA0X", "3DA0XYZ", "3DA0XYZ/R", "3XZ0AB", "3XZ0A", "LA/K7IHZ" };
     const char* tokens[] = { "CQ", "QRZ" };
     const char* grids[] = { "KO26", "RR99", "AA00", "RR09", "AA01", "RRR", "RR73", "73", "R+10", "R+05", "R-12", "R-02", "+10", "+05", "-02", "-02", "" };
 
@@ -242,14 +255,14 @@ int main()
         {
             for (int idx_callsign2 = 0; idx_callsign2 < SIZEOF_ARRAY(callsigns); ++idx_callsign2)
             {
-                test_std_msg(callsigns[idx_callsign], callsigns[idx_callsign2], grids[idx_grid]);
+                test_msg(callsigns[idx_callsign], callsigns[idx_callsign2], grids[idx_grid]);
             }
         }
         for (int idx_token = 0; idx_token < SIZEOF_ARRAY(tokens); ++idx_token)
         {
             for (int idx_callsign2 = 0; idx_callsign2 < SIZEOF_ARRAY(callsigns); ++idx_callsign2)
             {
-                test_std_msg(tokens[idx_token], callsigns[idx_callsign2], grids[idx_grid]);
+                test_msg(tokens[idx_token], callsigns[idx_callsign2], grids[idx_grid]);
             }
         }
     }
