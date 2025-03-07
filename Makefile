@@ -49,3 +49,11 @@ test_ft8: $(BUILD_DIR)/test/test.o $(FT8_OBJ)
 $(BUILD_DIR)/%.o: %.c
 	@mkdir -p $(dir $@)
 	$(CC) $(CFLAGS) -o $@ -c $^
+
+$(OUTPUTLIB): $(FT8_OBJ)
+	$(CC) -shared -o $@ $^
+
+install:
+	$(AR) rc libft8.a $(FT8_OBJ) $(COMMON_OBJ)
+	install libft8.a /usr/lib/libft8.a
+
