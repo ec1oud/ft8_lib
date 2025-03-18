@@ -11,11 +11,13 @@ FFT_OBJ  = $(patsubst %.c,$(BUILD_DIR)/%.o,$(FFT_SRC))
 
 TARGETS  = gen_ft8 decode_ft8 test_ft8 libft8.a
 
-CFLAGS   = -fsanitize=address -ggdb3 -I.
-#CFLAGS   = -fsanitize=address -O3 -ggdb3 -fPIC -I.
-#CFLAGS   = -I.
+ifdef FT8_DEBUG
+CFLAGS   = -fsanitize=address -ggdb3 -DHAVE_STPCPY -I. -DFTX_DEBUG_PRINT
 LDFLAGS  = -fsanitize=address -lm
-#LDFLAGS  = -lm
+else
+CFLAGS   = -O3 -DHAVE_STPCPY -I.
+LDFLAGS  = -lm
+endif
 
 # Optionally, use Portaudio for live audio input
 # Portaudio is a C++ library, so then you need to build with clang++ or g++:
