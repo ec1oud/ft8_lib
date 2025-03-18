@@ -124,6 +124,72 @@ static int ft8_sync_score(const ftx_waterfall_t* wf, const ftx_candidate_t* cand
     return score;
 }
 
+static void swap(int* xp, int* yp)
+{
+    int temp = *xp;
+    *xp = *yp;
+    *yp = temp;
+}
+
+// selection-sort n integers destructively
+static void selectionSort(int arr[], int n)
+{
+    int i, j, min_idx;
+
+    // One by one move boundary of unsorted subarray
+    for (i = 0; i < n - 1; i++)
+    {
+        // Find the minimum element in unsorted array
+        min_idx = i;
+        for (j = i + 1; j < n; j++)
+            if (arr[j] < arr[min_idx])
+                min_idx = j;
+
+        // Swap the found minimum element with the first element
+        swap(&arr[min_idx], &arr[i]);
+    }
+}
+
+static int get_snr(const ftx_waterfall_t* wf, ftx_candidate_t candidate)
+{
+    // array with wf.num_blocks (row of waterfall) x 8*wf.freq_osr (signals width)
+    // Get this waterfall zoom on the candidate symbols
+    // Sort max to min and calculate max/min = ft8snr, subtract -26db for snr on 2500hz
+
+    float freq_hz = (candidate.freq_offset + (float)candidate.freq_sub / 2) / 0.160f;
+    float minC = 0, maxC = 0;
+
+    for (int i = 0; i < wf->num_blocks; ++i)
+    {
+        int candidate_zoom[8 * wf->freq_osr * wf->time_osr];
+
+        for (int j = 0; j < 8; j++)
+        {
+            for (int k = 0; k < wf->freq_osr * wf->time_osr; k++)
+            {
+                candidate_zoom[(j * wf->freq_osr * wf->time_osr) + k] = wf->mag[(i * wf->block_stride) + candidate.freq_offset + candidate.freq_sub + (j * wf->freq_osr * wf->time_osr) + k];
+            }
+        }
+
+        selectionSort(candidate_zoom, 8 * wf->freq_osr * wf->time_osr);
+
+        for (int j = 0; j < wf->freq_osr * wf->time_osr * 2; j++)
+            minC += candidate_zoom[j + (2 * wf->freq_osr * wf->time_osr)];
+
+        for (int j = 1; j <= wf->freq_osr * wf->time_osr; j++)
+            maxC += candidate_zoom[(8 * wf->freq_osr * wf->time_osr) - j];
+    }
+
+    minC = minC / (wf->num_blocks * wf->freq_osr * wf->time_osr * 2);
+    maxC = maxC / (wf->num_blocks * wf->freq_osr * wf->time_osr);
+
+    int min = (int)(minC / 2 - 240);
+    int max = (int)(maxC / 2 - 240);
+    int snr = max - min - 26;
+
+    return snr;
+}
+
 static int ft4_sync_score(const ftx_waterfall_t* wf, const ftx_candidate_t* candidate)
 {
     int score = 0;
@@ -246,6 +312,10 @@ int ftx_find_candidates(const ftx_waterfall_t* wf, int num_candidates, ftx_candi
         len_unsorted--;
         heapify_down(heap, len_unsorted);
     }
+
+    // Add SNR to each candidate
+    for (int i = 0; i < heap_size; i++)
+        heap[i].snr = (int16_t)get_snr(wf, heap[i]);
 
     return heap_size;
 }
