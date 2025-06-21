@@ -1,6 +1,7 @@
 #include "text.h"
 #include "../common/all_prefixes.h"
 
+#include <ctype.h>
 #include <string.h>
 
 const char* trim_front(const char* str, char to_trim)
@@ -201,6 +202,18 @@ bool is_callsign(char* string)
         string = slash + 1;
         len = strlen(string);
     }
+    // if it doesn't contain a combination of letters and digits, it's not a callsign
+    int nnum = 0, nlet = 0;
+    for (int i = 0; i < len; ++i)
+        if (isspace(string[i]))
+            break;
+        else if (isdigit(string[i]))
+            ++nnum;
+        else if (isalpha(string[i])) {
+            ++nlet;
+    }
+    if (!nnum || !nlet)
+        return false;
     // it's a callsign if it starts with any known prefix, and is longer than the prefix
     for (int i = 0; i < all_prefixes_count; ++i) {
         int plen = strlen(all_prefixes[i]);

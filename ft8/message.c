@@ -1,5 +1,6 @@
 #include "message.h"
 #include "text.h"
+#include <ctype.h>
 #include <stdlib.h>
 #include <string.h>
 
@@ -25,6 +26,9 @@ static bool save_callsign(const ftx_callsign_hash_interface_t* hash_if, const ch
 static bool lookup_callsign(const ftx_callsign_hash_interface_t* hash_if, ftx_callsign_hash_type_t hash_type, uint32_t hash, char* callsign);
 
 static int32_t pack_basecall(const char* callsign, int length);
+
+// returns the numeric value if it matches CQ_nnn or CQ_abcd, otherwise -1
+static int cq_special(const char* string);
 
 /// Pack a special token, a 22-bit hash code, or a valid base call into a 29-bit integer.
 static int32_t pack28(const char* callsign, const ftx_callsign_hash_interface_t* hash_if, uint8_t* ip);
@@ -119,10 +123,31 @@ ftx_message_rc_t ftx_message_encode(ftx_message_t* msg, ftx_callsign_hash_interf
     char extra[20];
 
     const char* parse_position = message_text;
-    parse_position = copy_token(call_to, 12, parse_position);
+    bool is_cq = starts_with(message_text, "CQ");
+    if (is_cq) {
+        parse_position += 3;
+        parse_position = copy_token(call_to, 12, parse_position);
+        bool is_call_to = is_callsign(call_to);
+        LOG(LOG_DEBUG, "next token after CQ: %s in %s; callsign %d\n", call_to, message_text, is_call_to);
+        if (is_call_to) {
+            sprintf(call_to, "CQ");
+            parse_position = message_text + 3;
+        } else {
+            int cq_special_v = cq_special(call_to);
+            if (cq_special_v >= 0) {
+                char temp[12];
+                strcpy(temp, call_to);
+                sprintf(call_to, "CQ_%s", temp);
+            } else {
+                sprintf(call_to, "CQ");
+            }
+            LOG(LOG_DEBUG, "special %d; parse_pos after CQ: %s in %s\n", cq_special_v, parse_position, message_text);
+        }
+    } else {
+        parse_position = copy_token(call_to, 12, parse_position);
+    }
     parse_position = copy_token(call_de, 12, parse_position);
     parse_position = copy_token(extra, 20, parse_position);
-    bool is_call_to = is_callsign(call_to);
     bool is_call_de = is_callsign(call_de);
 
     if (call_to[11] != '\0')
@@ -141,7 +166,7 @@ ftx_message_rc_t ftx_message_encode(ftx_message_t* msg, ftx_callsign_hash_interf
         return FTX_MESSAGE_RC_ERROR_GRID;
     }
 
-    LOG(LOG_DEBUG, "parsed '%s' %d '%s' %d '%s'; remaining chars '%s'\n", call_to, is_call_to, call_de, is_call_de, extra, parse_position);
+    LOG(LOG_DEBUG, "parsed '%s' '%s' %d '%s'; remaining chars '%s'\n", call_to, call_de, is_call_de, extra, parse_position);
 
     ftx_message_rc_t rc;
     if (is_call_de) {
@@ -746,6 +771,34 @@ static int32_t pack_basecall(const char* callsign, int length)
     return -1;
 }
 
+// returns the numeric value if it matches CQ_nnn or CQ_abcd, otherwise -1
+static int cq_special(const char* string)
+{
+    int nnum = 0, nlet = 0;
+
+    // encode CQ_nnn or CQ_abcd
+    int m = 0;
+    for (int i = 3; i < 7; ++i) {
+        if (!string[i] || isspace(string[i]))
+            break;
+        else if (isdigit(string[i]))
+            ++nnum;
+        else if (isalpha(string[i])) {
+            ++nlet;
+            m = 27 * m + (string[i] - 'A' + 1);
+        }
+    }
+    //~ LOG(LOG_DEBUG, "CQ_nnn/CQ_abcd '%s' %d/%d\n", string, nnum, nlet);
+    if (nnum == 3 && nlet == 0) {
+        LOG(LOG_DEBUG, "CQ_nnn detected: %d\n", atoi(string + 3));
+        return atoi(string + 3);
+    }
+    else if (nlet <= 4) {
+        LOG(LOG_DEBUG, "CQ_a[bcd] detected: m %d\n", m);
+        return 1000 + m;
+    }
+}
+
 static int32_t pack28(const char* callsign, const ftx_callsign_hash_interface_t* hash_if, uint8_t* ip)
 {
     LOG(LOG_DEBUG, "pack28() callsign [%s]\n", callsign);
@@ -762,13 +815,13 @@ static int32_t pack28(const char* callsign, const ftx_callsign_hash_interface_t*
     int length = strlen(callsign);
     LOG(LOG_DEBUG, "Callsign length = %d\n", length);
 
-    if (starts_with(callsign, "CQ_") && length < 8)
-    {
-        int nnum = 0, nlet = 0;
-
-        // TODO: decode CQ_nnn or CQ_abcd
-        LOG(LOG_WARN, "CQ_nnn/CQ_abcd detected, not implemented\n");
-        return -1;
+    if (starts_with(callsign, "CQ_") && length < 8) {
+        int v = cq_special(callsign);
+        if (v < 0) {
+            LOG(LOG_WARN, "CQ_nnn/CQ_abcd '%s' not allowed\n", callsign);
+            return -1;
+        }
+        return 3 + v;
     }
 
     // Detect /R and /P suffix for basecall check

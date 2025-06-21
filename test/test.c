@@ -193,6 +193,8 @@ void test_std_msg(const char* call_to_tx, ftx_field_t to_field, const char* call
     printf("Decoded [%s] [%s] [%s]\n", call_to, call_de, extra);
     call_to = trim_brackets(call_to);
     call_de = trim_brackets(call_de);
+    if (starts_with(call_to_tx, "CQ_"))
+        call_to[2] = '_';
     CHECK(0 == strcmp(call_to, call_to_tx));
     CHECK(0 == strcmp(call_de, call_de_tx));
     CHECK(0 == strcmp(extra, extra_tx));
@@ -232,7 +234,7 @@ int main()
     // test1();
     // test4();
     const char* callsigns[] = { "YL3JG", "W1A", "W1A/R", "W5AB", "W8ABC", "DE6ABC", "DE6ABC/R", "DE7AB", "DE9A", "3DA0X", "3DA0XYZ", "3DA0XYZ/R", "3XZ0AB", "3XZ0A", "EA8/G5LSI" };
-    const char* tokens[] = { "CQ", "QRZ", /*"CQ_123", "CQ_000", "CQ_POTA", "CQ_SA", "CQ_O", "CQ_ASD" */ };
+    const char* tokens[] = { "CQ", "QRZ", "CQ_123", "CQ_000", "CQ_POTA", "CQ_SA", "CQ_O", "CQ_ASD" };
     const ftx_field_t token_types[] = { FTX_FIELD_TOKEN, FTX_FIELD_TOKEN, FTX_FIELD_TOKEN_WITH_ARG, FTX_FIELD_TOKEN_WITH_ARG, FTX_FIELD_TOKEN_WITH_ARG, FTX_FIELD_TOKEN_WITH_ARG, FTX_FIELD_TOKEN_WITH_ARG, FTX_FIELD_TOKEN_WITH_ARG };
     const char* grids[] = { "KO26", "RR99", "AA00", "RR09", "AA01", "RRR", "RR73", "73", "R+10", "R+05", "R-12", "R-02", "+10", "+05", "-02", "-02", "" };
     const ftx_field_t grid_types[] = { FTX_FIELD_GRID, FTX_FIELD_GRID, FTX_FIELD_GRID, FTX_FIELD_GRID, FTX_FIELD_GRID, FTX_FIELD_TOKEN, FTX_FIELD_TOKEN, FTX_FIELD_TOKEN, FTX_FIELD_RST, FTX_FIELD_RST, FTX_FIELD_RST, FTX_FIELD_RST, FTX_FIELD_RST, FTX_FIELD_RST, FTX_FIELD_RST, FTX_FIELD_RST, FTX_FIELD_NONE };
@@ -257,6 +259,10 @@ int main()
     test_msg("CQ EA8/G5LSI", "CQ EA8/G5LSI", &hash_if);
     test_msg("EA8/G5LSI R2RFE RR73", "<EA8/G5LSI> R2RFE RR73", &hash_if);
     test_msg("R2RFE/P EA8/G5LSI R+12", "R2RFE/P <EA8/G5LSI> R+12", &hash_if);
+    test_msg("CQ POTA YL/LB2JK KO16sw", "CQ POTA <YL/LB2JK> KO16", &hash_if);
+    test_msg("CQ SOTA LB2JK JO59", "CQ SOTA LB2JK JO59", &hash_if);
+    test_msg("CQ JA LB2JK JO59", "CQ JA LB2JK JO59", &hash_if);
+    test_msg("CQ 123 LB2JK JO59", "CQ 123 LB2JK JO59", &hash_if);
 
     // test_std_msg("YOMAMA", "MYMAMA/QRP", "73");
 
