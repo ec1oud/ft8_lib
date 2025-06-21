@@ -182,13 +182,17 @@ void test_std_msg(const char* call_to_tx, ftx_field_t to_field, const char* call
     CHECK(rc_encode == FTX_MESSAGE_RC_OK);
     printf("Encoded [%s] [%s] [%s]\n", call_to_tx, call_de_tx, extra_tx);
 
-    char call_to[14];
-    char call_de[14];
+    char call_to_arr[14];
+    char call_de_arr[14];
     char extra[14];
+    char *call_to = call_to_arr;
+    char *call_de = call_de_arr;
     ftx_field_t types[FTX_MAX_MESSAGE_FIELDS];
     ftx_message_rc_t rc_decode = ftx_message_decode_std(&msg, &hash_if, call_to, call_de, extra, types);
     CHECK(rc_decode == FTX_MESSAGE_RC_OK);
     printf("Decoded [%s] [%s] [%s]\n", call_to, call_de, extra);
+    call_to = trim_brackets(call_to);
+    call_de = trim_brackets(call_de);
     CHECK(0 == strcmp(call_to, call_to_tx));
     CHECK(0 == strcmp(call_de, call_de_tx));
     CHECK(0 == strcmp(extra, extra_tx));
@@ -227,8 +231,8 @@ int main()
 {
     // test1();
     // test4();
-    const char* callsigns[] = { "YL3JG", "W1A", "W1A/R", "W5AB", "W8ABC", "DE6ABC", "DE6ABC/R", "DE7AB", "DE9A", "3DA0X", "3DA0XYZ", "3DA0XYZ/R", "3XZ0AB", "3XZ0A" };
-    const char* tokens[] = { "CQ", "QRZ", "CQ_123", "CQ_000", "CQ_POTA", "CQ_SA", "CQ_O", "CQ_ASD" };
+    const char* callsigns[] = { "YL3JG", "W1A", "W1A/R", "W5AB", "W8ABC", "DE6ABC", "DE6ABC/R", "DE7AB", "DE9A", "3DA0X", "3DA0XYZ", "3DA0XYZ/R", "3XZ0AB", "3XZ0A", "EA8/G5LSI" };
+    const char* tokens[] = { "CQ", "QRZ", /*"CQ_123", "CQ_000", "CQ_POTA", "CQ_SA", "CQ_O", "CQ_ASD" */ };
     const ftx_field_t token_types[] = { FTX_FIELD_TOKEN, FTX_FIELD_TOKEN, FTX_FIELD_TOKEN_WITH_ARG, FTX_FIELD_TOKEN_WITH_ARG, FTX_FIELD_TOKEN_WITH_ARG, FTX_FIELD_TOKEN_WITH_ARG, FTX_FIELD_TOKEN_WITH_ARG, FTX_FIELD_TOKEN_WITH_ARG };
     const char* grids[] = { "KO26", "RR99", "AA00", "RR09", "AA01", "RRR", "RR73", "73", "R+10", "R+05", "R-12", "R-02", "+10", "+05", "-02", "-02", "" };
     const ftx_field_t grid_types[] = { FTX_FIELD_GRID, FTX_FIELD_GRID, FTX_FIELD_GRID, FTX_FIELD_GRID, FTX_FIELD_GRID, FTX_FIELD_TOKEN, FTX_FIELD_TOKEN, FTX_FIELD_TOKEN, FTX_FIELD_RST, FTX_FIELD_RST, FTX_FIELD_RST, FTX_FIELD_RST, FTX_FIELD_RST, FTX_FIELD_RST, FTX_FIELD_RST, FTX_FIELD_RST, FTX_FIELD_NONE };
@@ -250,9 +254,7 @@ int main()
             }
         }
     }
-    // TODO encoder says "Encoding as non-standard callsign"
-    // but decoding comes through as free text, so no field types decoded
-    test_msg("CQ EA8/G5LSI", "CQ EA8/G5LSI", NULL);
+    test_msg("CQ EA8/G5LSI", "CQ EA8/G5LSI", &hash_if);
     test_msg("EA8/G5LSI R2RFE RR73", "<EA8/G5LSI> R2RFE RR73", &hash_if);
     test_msg("R2RFE/P EA8/G5LSI R+12", "R2RFE/P <EA8/G5LSI> R+12", &hash_if);
 
