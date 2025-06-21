@@ -123,6 +123,8 @@ ftx_message_rc_t ftx_message_encode(ftx_message_t* msg, ftx_callsign_hash_interf
     parse_position = copy_token(call_to, 12, parse_position);
     parse_position = copy_token(call_de, 12, parse_position);
     parse_position = copy_token(extra, 20, parse_position);
+    bool is_call_to = is_callsign(call_to);
+    bool is_call_de = is_callsign(call_de);
 
     if (call_to[11] != '\0')
     {
@@ -140,16 +142,23 @@ ftx_message_rc_t ftx_message_encode(ftx_message_t* msg, ftx_callsign_hash_interf
         return FTX_MESSAGE_RC_ERROR_GRID;
     }
 
+    LOG(LOG_DEBUG, "parsed '%s' %d '%s' %d '%s'; remaining chars '%s'\n", call_to, is_call_to, call_de, is_call_de, extra, parse_position);
+
     ftx_message_rc_t rc;
-    rc = ftx_message_encode_std(msg, hash_if, call_to, call_de, extra);
-    if (rc == FTX_MESSAGE_RC_OK)
-        return rc;
-    rc = ftx_message_encode_nonstd(msg, hash_if, call_to, call_de, extra);
-    if (rc == FTX_MESSAGE_RC_OK)
-        return rc;
+    if (is_call_de) {
+        rc = ftx_message_encode_std(msg, hash_if, call_to, call_de, extra);
+        if (rc == FTX_MESSAGE_RC_OK)
+            return rc;
+        LOG(LOG_DEBUG, "   ftx_message_encode_std failed: %d\n", rc);
+        rc = ftx_message_encode_nonstd(msg, hash_if, call_to, call_de, extra);
+        if (rc == FTX_MESSAGE_RC_OK)
+            return rc;
+        LOG(LOG_DEBUG, "   ftx_message_encode_nonstd failed: %d\n", rc);
+    }
     rc = ftx_message_encode_free(msg, message_text);
     if (rc == FTX_MESSAGE_RC_OK)
         return rc;
+    LOG(LOG_DEBUG, "   ftx_message_encode_free failed: %d\n", rc);
 
     return rc;
 }

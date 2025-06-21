@@ -1,4 +1,5 @@
 #include "text.h"
+#include "../common/all_prefixes.h"
 
 #include <string.h>
 
@@ -177,6 +178,30 @@ int dd_to_int(const char* str, int length)
     }
 
     return negative ? -result : result;
+}
+
+bool is_callsign(char* string)
+{
+    int len = strlen(string);
+    // it can't be a callsign if it's less than 4 characters long
+    if (len < 4)
+        return false;
+    // if a slash is found, it could be a prefix or suffix; skip it if it's a prefix,
+    // i.e. if the number of characters after it are enough to form a callsign
+    char *slash = strchr(string, '/');
+    if (slash && slash - string <= 4 && len >= slash - string + 4) {
+        string = slash + 1;
+        len = strlen(string);
+    }
+    // it's a callsign if it starts with any known prefix, and is longer than the prefix
+    for (int i = 0; i < all_prefixes_count; ++i) {
+        int plen = strlen(all_prefixes[i]);
+        if (len <= plen)
+            continue;
+        if (strncmp(string, all_prefixes[i], plen) == 0)
+            return true;
+    }
+    return false;
 }
 
 // Convert a 2 digit integer to string
