@@ -1,5 +1,4 @@
 #include "text.h"
-#include "../common/all_prefixes.h"
 
 #include <ctype.h>
 #include <string.h>
@@ -189,7 +188,7 @@ int dd_to_int(const char* str, int length)
     return negative ? -result : result;
 }
 
-bool is_callsign(char* string)
+bool likely_callsign(char* string)
 {
     int len = strlen(string);
     // it can't be a callsign if it's less than 4 characters long
@@ -214,15 +213,8 @@ bool is_callsign(char* string)
     }
     if (!nnum || !nlet)
         return false;
-    // it's a callsign if it starts with any known prefix, and is longer than the prefix
-    for (int i = 0; i < all_prefixes_count; ++i) {
-        int plen = strlen(all_prefixes[i]);
-        if (len <= plen)
-            continue;
-        if (strncmp(string, all_prefixes[i], plen) == 0)
-            return true;
-    }
-    return false;
+    // give the benefit of the doubt unless we can refine this algorithm further
+    return true;
 }
 
 // Convert a 2 digit integer to string

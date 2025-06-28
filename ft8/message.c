@@ -127,7 +127,7 @@ ftx_message_rc_t ftx_message_encode(ftx_message_t* msg, ftx_callsign_hash_interf
     if (is_cq) {
         parse_position += 3;
         parse_position = copy_token(call_to, 12, parse_position);
-        bool is_call_to = is_callsign(call_to);
+        bool is_call_to = likely_callsign(call_to);
         LOG(LOG_DEBUG, "next token after CQ: %s in %s; callsign %d\n", call_to, message_text, is_call_to);
         if (is_call_to) {
             sprintf(call_to, "CQ");
@@ -148,7 +148,7 @@ ftx_message_rc_t ftx_message_encode(ftx_message_t* msg, ftx_callsign_hash_interf
     }
     parse_position = copy_token(call_de, 12, parse_position);
     parse_position = copy_token(extra, 20, parse_position);
-    bool is_call_de = is_callsign(call_de);
+    bool is_call_de = likely_callsign(call_de);
 
     if (call_to[11] != '\0')
     {

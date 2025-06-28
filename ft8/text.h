@@ -54,7 +54,7 @@ const char* copy_token(char* token, int length, const char* string);
 char* append_string(char* string, const char* token);
 
 // Returns 1 if the string looks like a callsign, 0 if not
-bool is_callsign(char* string);
+bool likely_callsign(char* string);
 
 // Parse a 2 digit integer from string
 int dd_to_int(const char* str, int length);
